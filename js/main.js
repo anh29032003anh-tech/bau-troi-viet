@@ -457,7 +457,7 @@ function playerControl(P, dt) {
   pl.ctl.roll = st.roll; pl.ctl.pitch = st.pitch; pl.ctl.yaw = st.yaw;
   const dth = (st.thrUp - st.thrDn) * dt * 0.55;
   pl.thr = Math.max(0, Math.min(1, pl.thr + dth));
-  pl.brake = st.held.brake || (pl.onGround && st.thrDn > 0.3 && pl.thr <= 0.01) ? 1 : 0;
+  pl.brake = st.held.brake || (pl.onGround && st.thrDn > 0.3 && pl.thr <= 0.01) || (pl.onGround && pl.thr <= 0.03 && Math.hypot(...pl.v) < 8) ? 1 : 0;
   if (st.pressed.gear && !P.spec.fixedGear && !pl.onGround) { pl.gear = !pl.gear; msg(P, pl.gear ? 'Hạ càng' : 'Thu càng'); }
   if (st.pressed.flaps) { pl.flap = (pl.flap + 1) % 3; msg(P, `Cánh tà nấc ${pl.flap}`); }
   if (!P.spec.fbw) { if (st.held.trimUp) pl.trim = Math.min(0.6, pl.trim + dt * 0.08); if (st.held.trimDn) pl.trim = Math.max(-0.6, pl.trim - dt * 0.08); }
