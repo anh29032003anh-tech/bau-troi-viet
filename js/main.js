@@ -183,7 +183,7 @@ function menuInput(dt) {
   if (n.start && screen === 'pause') act('resume');
 }
 
-let bindPad = 0, capture = null;
+let bindPad = 0, capture = null, bindSeen = false;
 function bindText(b) {
   if (!b) return '—';
   if (b.t === 'b') return `Nút ${b.i + 1}`;
@@ -193,7 +193,8 @@ function bindText(b) {
   return '?';
 }
 function renderBind() {
-  const gp = pads()[bindPad];
+  const g0 = pads()[bindPad], gp = g0 && g0.active ? g0 : null;
+  bindSeen = !!gp;
   $('bindPad').textContent = gp ? `Tay cầm: ${gp.id}${gp.mapping === 'standard' ? ' · bố trí chuẩn' : ' · bố trí riêng (nên gán lại)'}` : 'Chưa thấy tay cầm. Cắm tay cầm rồi bấm một nút bất kỳ.';
   const b = gp ? loadBinds(gp.id, gp.mapping === 'standard') : {};
   $('bindRows').innerHTML = ACTIONS.map(a => `<div class="row nav" data-act="b:${a.id}"><div class="k">${a.ten}</div><div class="v"><b>${bindText(b[a.id])}</b></div></div>`).join('');
@@ -201,7 +202,7 @@ function renderBind() {
   refreshFocus();
 }
 function startCapture(id) {
-  const gp = pads()[bindPad]; if (!gp) return;
+  const gp = pads()[bindPad]; if (!gp || !gp.active) return;
   const a = ACTIONS.find(x => x.id === id);
   capture = { id, kind: a.kind, rest: [...gp.axes], btn0: gp.buttons.map(b => b.pressed), t: 0, msg: `Đang chờ: ${a.hint}…`, stage: 0, wait: 0.35 };
   renderBind();
@@ -539,8 +540,8 @@ function frame(now) {
   const dt = Math.min(0.05, (now - last) / 1000); last = now;
   const P0 = pads()[0];
   const pe = $('pad');
-  if (screen === 'menu') { pe.textContent = P0 ? `Tay cầm: ${P0.id.slice(0, 48)}${pads().length > 1 ? ` (+${pads().length - 1})` : ''}` : 'Chưa thấy tay cầm · bấm một nút trên tay cầm'; pe.classList.toggle('ok', !!P0); }
-  if (screen && screen !== 'loading') { menuInput(dt); pollCapture(dt); if (screen === 'bind' && !capture && (now / 500 | 0) % 2 === 0) { } }
+  if (screen === 'menu') { const ok = P0 && P0.active; pe.textContent = ok ? `Tay cầm: ${P0.id.slice(0, 48)}` : 'Bấm một nút hoặc gạt cần trên tay cầm để game nhận'; pe.classList.toggle('ok', !!ok); }
+  if (screen && screen !== 'loading') { menuInput(dt); pollCapture(dt); if (screen === 'bind' && !capture && bindSeen !== !!pads()[bindPad]?.active) renderBind(); }
   if (!game) { hg.clearRect(0, 0, W, H); renderPreview(dt); return; }
   if (game.loading) { loadingStep(dt); renderGame(dt); return; }
   if (!paused) {

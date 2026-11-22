@@ -42,7 +42,27 @@ addEventListener('keydown', e => { keys.add(e.code); if (['Space', 'ArrowUp', 'A
 addEventListener('keyup', e => keys.delete(e.code));
 addEventListener('blur', () => keys.clear());
 
-export function pads() { return [...(navigator.getGamepads ? navigator.getGamepads() : [])].filter(Boolean); }
+const track = new Map(); let actSeq = 0;
+const OFF = { pressed: false, value: 0 };
+function view(gp) {
+  const key = gp.index + '|' + gp.id;
+  let s = track.get(key);
+  if (!s) { s = { base: [...gp.axes], live: new Set(), stuck: new Set(gp.buttons.map((b, i) => b.pressed ? i : -1).filter(i => i >= 0)), act: 0 }; track.set(key, s); }
+  gp.axes.forEach((v, i) => { if (!s.live.has(i) && Math.abs(v - s.base[i]) > 0.3) { s.live.add(i); if (!s.act) s.act = ++actSeq; } });
+  gp.buttons.forEach((b, i) => { if (s.stuck.has(i)) { if (!b.pressed) s.stuck.delete(i); } else if (b.pressed && !s.act) s.act = ++actSeq; });
+  const axes = gp.axes.map((v, i) => {
+    if (s.live.has(i)) return v;
+    const b0 = s.base[i];
+    if (i === 9 && gp.axes.length >= 10 && Math.abs(b0) <= 1.05) return 1.2857;
+    return Math.abs(b0) > 0.6 ? b0 : 0;
+  });
+  const buttons = gp.buttons.map((b, i) => s.stuck.has(i) ? OFF : b);
+  return { id: gp.id, index: gp.index, mapping: gp.mapping, axes, buttons, act: s.act, active: s.act > 0, raw: gp };
+}
+export function pads() {
+  return [...(navigator.getGamepads ? navigator.getGamepads() : [])].filter(Boolean).map(view)
+    .sort((a, b) => (a.act || 1e9) - (b.act || 1e9) || a.index - b.index);
+}
 
 export function loadBinds(id, std) {
   try { const b = JSON.parse(localStorage.getItem('bind:' + id)); if (b) return { ...(std ? STD : GENERIC), ...b }; } catch (e) { }
@@ -71,7 +91,7 @@ function readBind(gp, b, uni) {
   return 0;
 }
 
-const dz = (v, d = 0.08) => Math.abs(v) < d ? 0 : Math.sign(v) * (Math.abs(v) - d) / (1 - d);
+const dz = (v, d = 0.12) => Math.abs(v) < d ? 0 : Math.sign(v) * (Math.abs(v) - d) / (1 - d);
 const expo = (v, e = 0.35) => (1 - e) * v + e * v * v * v;
 
 export class Controller {
@@ -115,7 +135,7 @@ export class Controller {
 export function rumble(dev, strong, weak, ms) {
   if (!dev || !dev.startsWith('pad')) return;
   const gp = pads()[+dev.slice(3)];
-  try { gp?.vibrationActuator?.playEffect('dual-rumble', { duration: ms, strongMagnitude: strong, weakMagnitude: weak }); } catch (e) { }
+  try { gp?.raw?.vibrationActuator?.playEffect('dual-rumble', { duration: ms, strongMagnitude: strong, weakMagnitude: weak }); } catch (e) { }
 }
 
 export class MenuNav {
