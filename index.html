@@ -1,0 +1,138 @@
+<!doctype html>
+<html lang="vi">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Bầu Trời Việt</title>
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Be+Vietnam+Pro:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root { --bg: rgba(8,16,26,0.72); --line: rgba(160,210,255,0.18); --txt: #eaf4ff; --mute: #9db4c8; --acc: #ffc94a; --acc2: #47d7ff; }
+* { box-sizing: border-box; }
+html, body { margin: 0; height: 100%; overflow: hidden; background: #0b1622; color: var(--txt); font-family: "Be Vietnam Pro", "Segoe UI", sans-serif; }
+canvas { display: block; }
+#gl, #hud { position: fixed; inset: 0; width: 100%; height: 100%; }
+#hud { pointer-events: none; }
+.screen { position: fixed; inset: 0; display: none; }
+.screen.on { display: flex; }
+#menu { align-items: stretch; background: linear-gradient(90deg, rgba(5,12,20,0.88) 0%, rgba(5,12,20,0.55) 42%, rgba(5,12,20,0) 70%); }
+.left { width: min(560px, 100%); padding: 34px 28px 20px 40px; display: flex; flex-direction: column; gap: 14px; overflow-y: auto; }
+h1 { margin: 0; font-size: 46px; font-weight: 800; letter-spacing: 1px; line-height: 1; }
+h1 span { color: var(--acc); }
+.sub { color: var(--mute); font-size: 14px; margin-top: -4px; }
+.rows { display: flex; flex-direction: column; gap: 6px; margin-top: 6px; }
+.row { display: grid; grid-template-columns: 170px 1fr; align-items: center; gap: 10px; padding: 8px 12px; border-radius: 10px; border: 1px solid transparent; background: rgba(255,255,255,0.03); cursor: pointer; transition: background .12s, border-color .12s; }
+.row .k { color: var(--mute); font-size: 14px; }
+.row .v { display: flex; align-items: center; justify-content: space-between; font-weight: 600; font-size: 15px; }
+.row .v b { font-weight: 600; text-align: center; flex: 1; }
+.row .ar { color: var(--mute); font-size: 18px; padding: 0 8px; user-select: none; }
+.row.f { border-color: var(--acc); background: rgba(255,201,74,0.1); }
+.row.f .ar { color: var(--acc); }
+.row.dis { opacity: 0.35; }
+.btn { padding: 11px 14px; border-radius: 10px; text-align: center; font-weight: 700; background: rgba(255,255,255,0.06); border: 1px solid var(--line); cursor: pointer; font-size: 15px; }
+.btn.f { border-color: var(--acc); background: rgba(255,201,74,0.14); }
+.btn.go { background: linear-gradient(90deg, #ffb52e, #ffd66b); color: #1a1205; border: none; font-size: 18px; padding: 14px; }
+.btn.go.f { outline: 3px solid #fff; }
+.btns { display: grid; grid-template-columns: 1fr 1fr; gap: 8px; }
+.card { position: fixed; right: 30px; bottom: 30px; width: min(420px, calc(100% - 60px)); background: var(--bg); border: 1px solid var(--line); border-radius: 14px; padding: 18px 20px; backdrop-filter: blur(8px); }
+.card h2 { margin: 0 0 2px; font-size: 22px; }
+.card .tag { display: inline-block; font-size: 12px; padding: 2px 8px; border-radius: 99px; background: rgba(71,215,255,0.16); color: var(--acc2); margin-bottom: 8px; }
+.card .tag.m { background: rgba(255,120,90,0.18); color: #ff9c86; }
+.card p { margin: 6px 0 10px; color: #cfe0ee; font-size: 14px; line-height: 1.5; }
+.card table { width: 100%; font-size: 13px; border-collapse: collapse; }
+.card td { padding: 3px 0; border-bottom: 1px solid rgba(255,255,255,0.06); }
+.card td:first-child { color: var(--mute); width: 46%; }
+#pad { position: fixed; right: 30px; top: 26px; font-size: 13px; color: var(--mute); background: var(--bg); padding: 8px 14px; border-radius: 99px; border: 1px solid var(--line); }
+#pad.ok { color: #8dffb6; }
+.panel { margin: auto; width: min(760px, calc(100% - 32px)); max-height: calc(100% - 40px); overflow-y: auto; background: rgba(8,16,26,0.92); border: 1px solid var(--line); border-radius: 16px; padding: 24px 28px; }
+.panel h2 { margin: 0 0 12px; }
+.panel .row { grid-template-columns: 1fr 1fr; }
+.grid2 { display: grid; grid-template-columns: 1fr 1fr; gap: 6px 22px; font-size: 14px; }
+.grid2 div span { color: var(--acc); font-weight: 700; }
+.note { color: var(--mute); font-size: 13px; margin: 10px 0; line-height: 1.5; }
+#loading { align-items: center; justify-content: center; flex-direction: column; background: rgba(5,12,20,0.75); gap: 14px; }
+#loading .bar { width: min(420px, 80%); height: 8px; border-radius: 9px; background: rgba(255,255,255,0.1); overflow: hidden; }
+#loading .bar i { display: block; height: 100%; width: 0; background: linear-gradient(90deg, #47d7ff, #ffc94a); transition: width .2s; }
+#loading .t { font-size: 18px; font-weight: 600; }
+#loading .s { color: var(--mute); font-size: 13px; }
+#pause { align-items: center; justify-content: center; background: rgba(5,12,20,0.55); }
+#pause .panel { width: min(380px, 90%); display: flex; flex-direction: column; gap: 10px; text-align: center; }
+#bindWait { color: var(--acc); font-weight: 700; min-height: 22px; margin: 8px 0; }
+@media (max-width: 900px) { .card { display: none; } .left { padding: 20px 16px; } .row { grid-template-columns: 120px 1fr; } }
+</style>
+<script type="importmap">{ "imports": { "three": "https://cdn.jsdelivr.net/npm/three@0.160.0/build/three.module.js" } }</script>
+</head>
+<body>
+<canvas id="gl"></canvas>
+<canvas id="hud"></canvas>
+
+<div id="menu" class="screen on">
+  <div class="left">
+    <h1>BẦU TRỜI <span>VIỆT</span></h1>
+    <div class="sub">Lái và không chiến trên bản đồ vệ tinh thật của Việt Nam</div>
+    <div class="rows" id="rows"></div>
+    <div class="btns">
+      <div class="btn nav" data-act="bind">Gán nút tay cầm</div>
+      <div class="btn nav" data-act="help">Hướng dẫn điều khiển</div>
+    </div>
+    <div class="btn go nav" data-act="start">BẮT ĐẦU BAY</div>
+  </div>
+  <div id="pad">Chưa thấy tay cầm · bấm một nút bất kỳ trên tay cầm</div>
+  <div class="card" id="card"></div>
+</div>
+
+<div id="loading" class="screen">
+  <div class="t" id="ldT">Đang tải bản đồ vệ tinh…</div>
+  <div class="bar"><i id="ldB"></i></div>
+  <div class="s" id="ldS">Địa hình thật từ dữ liệu độ cao toàn cầu, ảnh vệ tinh độ phân giải cao</div>
+</div>
+
+<div id="pause" class="screen">
+  <div class="panel">
+    <h2>Tạm dừng</h2>
+    <div class="btn nav" data-act="resume">Tiếp tục bay</div>
+    <div class="btn nav" data-act="restart">Bay lại từ đầu</div>
+    <div class="btn nav" data-act="quit">Về menu chính</div>
+  </div>
+</div>
+
+<div id="help" class="screen">
+  <div class="panel">
+    <h2>Hướng dẫn điều khiển</h2>
+    <div class="grid2">
+      <div><b>Tay cầm (bố trí chuẩn)</b></div><div><b>Bàn phím trái (Người 1)</b></div>
+      <div><span>Cần trái</span> nghiêng cánh, ngóc/chúc</div><div><span>W / S</span> chúc / ngóc mũi</div>
+      <div><span>LB / RB</span> bánh lái hướng</div><div><span>A / D</span> nghiêng cánh</div>
+      <div><span>RT / LT</span> tăng / giảm ga</div><div><span>Q / E</span> bánh lái hướng</div>
+      <div><span>A</span> bắn pháo · <span>B</span> tên lửa</div><div><span>Shift / Ctrl trái</span> tăng / giảm ga</div>
+      <div><span>X</span> mồi bẫy · <span>Y</span> đổi góc nhìn</div><div><span>Space</span> pháo · <span>F</span> tên lửa · <span>R</span> mồi bẫy</div>
+      <div><span>D-pad ←</span> càng · <span>→</span> cánh tà</div><div><span>G</span> càng · <span>V</span> cánh tà · <span>B</span> phanh</div>
+      <div><span>D-pad ↑↓</span> trim · <span>L3</span> phanh</div><div><span>C</span> góc nhìn · <span>T</span> đổi mục tiêu</div>
+      <div><span>R3</span> đổi mục tiêu · <span>Start</span> tạm dừng</div><div><span>Z / X</span> trim · <span>1 2 3 4</span> nhìn quanh</div>
+      <div><span>Cần phải</span> nhìn quanh</div><div><b>Bàn phím phải (Người 2)</b></div>
+      <div></div><div><span>Mũi tên</span> lái · <span>N / M</span> bánh lái hướng</div>
+      <div></div><div><span>O / L</span> ga · <span>Enter</span> pháo · <span>Shift phải</span> tên lửa</div>
+      <div></div><div><span>Ctrl phải</span> mồi bẫy · <span>P</span> mục tiêu · <span>/</span> góc nhìn</div>
+    </div>
+    <p class="note">Máy bay bay theo khí động học thật: lực nâng phụ thuộc tốc độ, góc tấn và mật độ không khí theo độ cao. Kéo quá góc tấn sẽ thất tốc, lên cao động cơ yếu đi, vượt âm thanh thì lực cản tăng vọt. Máy bay có điều khiển bay bằng điện (Su-30MK2, F-16, Yak-130, A321, 787) tự giới hạn G và góc tấn, máy bay cơ khí (MiG-21, ATR 72, Cessna) phải tự giữ. Hạ cánh: hạ càng, thả cánh tà, giảm ga, chạm đất nhẹ dưới 3 m/s rồi bấm phanh.</p>
+    <p class="note">Tay cầm loại thường (không phải Xbox) sẽ có nút lệch, hãy vào <b>Gán nút tay cầm</b> để gán lại một lần, game tự nhớ.</p>
+    <div class="btn nav f" data-act="close">Đóng</div>
+  </div>
+</div>
+
+<div id="bind" class="screen">
+  <div class="panel">
+    <h2>Gán nút tay cầm</h2>
+    <div class="note" id="bindPad">—</div>
+    <div id="bindWait"></div>
+    <div class="rows" id="bindRows"></div>
+    <div class="btns" style="margin-top:10px">
+      <div class="btn nav" data-act="bindReset">Khôi phục mặc định</div>
+      <div class="btn nav" data-act="close">Xong</div>
+    </div>
+  </div>
+</div>
+
+<script type="module" src="js/main.js"></script>
+</body>
+</html>
